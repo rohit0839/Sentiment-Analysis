@@ -1,134 +1,173 @@
-{% extends "bootstrap/base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Text & Sentiment Analyzer</title>
+  
+  <!-- Bootstrap 5 CSS & Font Awesome Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  
+  <style>
+    body {
+      background-color: #f8fafc;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #334155;
+    }
+    .hero-banner {
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      color: #ffffff;
+      border-radius: 1rem;
+    }
+    .custom-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 0.85rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .sentence-chip {
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-left: 4px solid;
+    }
+  </style>
+</head>
+<body class="py-5">
 
-{% block content %}
+  <div class="container" style="max-width: 900px;">
+    <!-- Header -->
+    <div class="hero-banner p-4 p-md-5 mb-4 text-center shadow-sm">
+      <h2 class="fw-bold mb-2"><i class="fa-solid fa-brain me-2"></i>Smart Text & Sentiment Insights</h2>
+      <p class="mb-0 text-white-50">Instant tone analysis, readability metrics, and key topic extraction</p>
+    </div>
 
-<style type="text/css">
-	body{
-	font:15px/1.5 Arial,Helvetica,sans-serif;
-}
-		.spinner-1:before{
-			content: "";
-			box-sizing: border-box;
-			position: absolute;
-			top:50%;
-			left: 50%;
-			height: 60px;
-			width: 60px;
-			margin-top: -30px;
-			margin-left: -30px;
-			border-radius: 50%;
-			border:6px solid transparent;
-			border-top-color: blue;
-			animation: spinner 0.7s linear infinite;
-		}
-                 .jumbotron text-center{
-                  background-color:green;
-                  color:white;
-                   }
-		@keyframes spinner {
-			to {
-				transform: rotate(360deg);
-			}
-		}
-		li { background-color:#BDBDBD; }
-		li:nth-child(odd) { background-color:green; }
-		</style>
+    <!-- Input Form -->
+    <div class="card custom-card bg-white p-4 mb-4">
+      <form method="POST" action="{{ url_for('analyse') }}" id="nlpForm">
+        <div class="mb-3">
+          <label for="rawtext" class="form-label fw-semibold">Enter or paste text to analyze:</label>
+          <textarea class="form-control" rows="5" name="rawtext" id="rawtext" placeholder="Type or paste your text here..." required>{{ received_text if received_text else '' }}</textarea>
+        </div>
+        
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary px-4 fw-medium">
+            <i class="fa-solid fa-bolt me-1"></i> Analyze Text
+          </button>
+          <button type="button" onclick="document.getElementById('rawtext').value=''" class="btn btn-outline-secondary px-3">
+            Clear
+          </button>
+          <a href="{{ url_for('index') }}" class="btn btn-outline-danger px-3">
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
 
+    <!-- Results Section -->
+    {% if received_text %}
+    <div class="card custom-card bg-white overflow-hidden mb-4">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+        <span class="fw-bold text-dark"><i class="fa-solid fa-square-poll-vertical me-2"></i>Analysis Report</span>
+        <span class="badge bg-secondary">Processed in {{ final_time }}s</span>
+      </div>
+      
+      <div class="card-body p-4">
+        
+        <!-- Metric Cards -->
+        <div class="row g-3 mb-4 text-center">
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3">
+              <small class="text-muted d-block">Emotional Tone</small>
+              <span class="fs-4 fw-bold text-{{ tone_color }}">{{ tone_emoji }} {{ tone_label }}</span>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3">
+              <small class="text-muted d-block">Content Style</small>
+              <span class="fs-5 fw-bold text-dark">{{ style_label }}</span>
+              <small class="text-muted d-block" style="font-size: 0.75rem;">({{ opinion_pct }}% opinion)</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3">
+              <small class="text-muted d-block">Word Count</small>
+              <span class="fs-4 fw-bold text-primary">{{ word_count }}</span>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3">
+              <small class="text-muted d-block">Est. Read Time</small>
+              <span class="fs-4 fw-bold text-info">~{{ reading_time }} min</span>
+            </div>
+          </div>
+        </div>
 
-<div class="container">
-	<div class="jumbotron text-center">
-		<h3><b>SENTIMENT ANALYSIS USING NLP<b></h3>
-		<p>Text Summarization Tool</p>
-	</div>
-</div>
+        <!-- Tone & Subjectivity Visual Sliders -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="fw-semibold small text-muted mb-1">Polarity Score (Scale: -1 to +1)</label>
+            <div class="progress" style="height: 12px;">
+              <!-- Map -1..1 to 0..100% -->
+              {% set polarity_pct = ((polarity + 1) / 2) * 100 %}
+              <div class="progress-bar bg-{{ tone_color }}" role="progressbar" style="width: {{ polarity_pct }}%;"></div>
+            </div>
+            <div class="d-flex justify-content-between small text-muted mt-1">
+              <span>Negative (-1)</span>
+              <span class="fw-bold">{{ polarity }}</span>
+              <span>Positive (+1)</span>
+            </div>
+          </div>
 
-<div class="container">
-	<form method="POST" action="{{ url_for('analyse')}}" id="myForm">
-		<label><strong>Enter Your Text Below<strong></label><br>
-    <textarea class="form-control" rows="20" cols="40" name="rawtext"></textarea><br>
-    <input type="submit" onclick="myAnalyser()" value="Submit" class="btn btn-primary ">
-    <input type="button" onclick="myFunction()" value="Clear" class="btn btn-outline-dark">
-    <a href="{{ url_for('index')}}" type="button" class="btn btn-danger">Reset</a>
-	</form>
-	
-</div>
-<br/>
-<hr/>
-<div class="main">
-<div class="container">
-	<div class="card">
-  <div class="card-header">
-    Main Points
+          <div class="col-md-6">
+            <label class="fw-semibold small text-muted mb-1">Objectivity vs. Opinion</label>
+            <div class="progress" style="height: 12px;">
+              <div class="progress-bar bg-warning" role="progressbar" style="width: {{ opinion_pct }}%;"></div>
+            </div>
+            <div class="d-flex justify-content-between small text-muted mt-1">
+              <span>Factual (0%)</span>
+              <span class="fw-bold">{{ opinion_pct }}% Opinion</span>
+              <span>Subjective (100%)</span>
+            </div>
+          </div>
+        </div>
+
+        <hr class="text-muted opacity-25 mb-4">
+
+        <!-- Top Keywords -->
+        <h6 class="fw-bold mb-3"><i class="fa-solid fa-tags me-1"></i> Most Frequent Topics:</h6>
+        {% if top_keywords %}
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            {% for word, count in top_keywords %}
+              <a href="https://www.dictionary.com/browse/{{ word }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill">
+                {{ word }} <span class="badge text-bg-primary ms-1">{{ count }}</span>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted small mb-4">No key noun topics detected.</p>
+        {% endif %}
+
+        <hr class="text-muted opacity-25 mb-4">
+
+        <!-- Sentence Breakdown Heatmap -->
+        <h6 class="fw-bold mb-3"><i class="fa-solid fa-list-check me-1"></i> Sentence Breakdown:</h6>
+        <div class="mb-0">
+          {% for item in sentence_analysis %}
+            <div class="sentence-chip {{ item.class }} d-flex justify-content-between align-items-center">
+              <span class="small">{{ item.text }}</span>
+              <span class="badge bg-white text-dark border ms-2" style="font-size: 0.75rem;">
+                {{ item.polarity }}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+
+      </div>
+    </div>
+    {% endif %}
   </div>
-  <div class="card-body">
-    <h5 class="card-title"><div class="alert alert-primary" role="alert">
-  This text has {{number_of_tokens}} tokens with {{len_of_words}} important point
-</div> </h5>
-    <div class="card-text"> 
-    	<h5>Your Text</h5>
-    	<p style="color:#0091EA;font-family:sans-serif;">{{ received_text }}</p>
-    	<hr/>
-<br/>
-<p>Time Elapsed: <span style="color:#0091EA;">{{ final_time }} </span> seconds to analyse</p>
-    <p>This text is about:</p>
-    {% for i in summary %}
-    <ul class="list-group ">
-    	<li class="list-group-item list-group-item-info"><span style="color:black">{{i}}</span>
-    		<a href="http://www.dictionary.com/browse/{{i}}?s=" target="_blank" type="button" class="btn btn-outline-primary btn-sm" style="float:right;font-size:9px;color:#fff;">View</a>
-    		
-    	</li>
-    </ul>
-	
-	{% endfor %}
 
-  </div>
-  <div class="card-footer text-muted">
-  <table class="table table-striped table-dark" >
-  <thead>
-    <tr>
-      <th scope="col">Sentiment</th>
-      <th scope="col">Polarity</th>
-      <th scope="col">Subjectivity</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th scope="row">Score:</th>
-      <td>{{blob_sentiment}}</td>
-      <td>{{blob_subjectivity}}</td>
-    </tr>
-</tbody></table>
-</div>	
-</div>
-</div>
-
-{% endblock %}
-
-<!-- Scripts starts here -->
-{% block scripts %}
-
-{{ super() }}
-
-<script>
-function myFunction() {
-    document.getElementById("myForm").reset();
-}
-</script>
-<script>
-function myAnalyser() {
-    document.querySelector('.main div').style.display = 'none';
-	//Hide the main division
-	document.querySelector('.main').classList.add('spinner-1');
-	//Server request
-	setTimeout(() => {
-	document.querySelector('.main').classList.remove('spinner-1');
-	//Remove the animation
-	document.querySelector('.main div').style.display = 'block';
-	//Show the main division
-	},5000);//Number of seconds to last
-}
-</script>
-
-<!-- Prevent it from being overwritten -->
-
-{% endblock %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

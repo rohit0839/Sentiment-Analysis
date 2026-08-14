@@ -3,7 +3,7 @@ Sentiment Analysis on reviews with the help of Python NLP library - TextBlob and
 
 <hr/>
 
-![animation](Animation.gif)
+![image](image.png)
 
 <hr/>
 
@@ -14,6 +14,7 @@ Whereas, a **Subjectivity** identification task reports a float within the range
 # Running
 Install necessary python libraries as per _requirements.txt_ file
 ```
-python app.py
+pip3 install -r requirements.txt
+python3 app.py
 ```
 
