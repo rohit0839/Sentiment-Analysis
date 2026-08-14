@@ -2,7 +2,7 @@ import os
 import time
 from collections import Counter
 import nltk
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory
 from textblob import TextBlob
 
 # Look for bundled nltk_data if it exists (for Vercel deployment)
@@ -12,6 +12,14 @@ if os.path.exists(local_nltk_dir):
     nltk.data.path.insert(0, local_nltk_dir)
 
 app = Flask(__name__)
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'favicon.ico',
+        mimetype='image/vnd.microsoft.icon'
+    )
 
 @app.route('/')
 def index():
